@@ -1,0 +1,18 @@
+#!/bin/bash
+# installed-by: jitter-hud-installer
+# Prints what the HUD sees. Run it and paste the output if a panel looks wrong.
+B="$HOME/.local/bin"
+line() { printf '\n==== %s ====\n' "$*"; }
+line "conky";            conky -v 2>/dev/null | grep -iE "^conky|cairo|lua" | head -4
+line "display";          xrandr --listmonitors 2>/dev/null
+line "battery  (jitter-batt)";   "$B/jitter-batt"
+echo "-- /sys/class/power_supply:"; ls /sys/class/power_supply 2>/dev/null || echo "(none)"
+for d in /sys/class/power_supply/*; do [ -d "$d" ] && printf '%s: type=%s capacity=%s status=%s\n' "${d##*/}" "$(cat $d/type 2>/dev/null)" "$(cat $d/capacity 2>/dev/null)" "$(cat $d/status 2>/dev/null)"; done
+command -v upower >/dev/null && { echo "-- upower:"; upower -e; } || echo "-- upower not installed"
+line "usb devices (jitter-usb)"; "$B/jitter-usb"
+echo "-- lsusb:";  lsusb 2>/dev/null || echo "(lsusb not installed)"
+echo "-- serial nodes:"; ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || echo "(none)"
+line "wifi (jitter-wifi)";  "$B/jitter-wifi"
+line "temp (jitter-temp)";  "$B/jitter-temp"
+line "weather cache";    cat "$HOME/.cache/jitter-weather.txt" 2>/dev/null || echo "(not fetched yet)"
+line "last conky log lines"; tail -8 "$HOME/.cache/jitter-conky.log" 2>/dev/null

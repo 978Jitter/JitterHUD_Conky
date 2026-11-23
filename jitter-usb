@@ -1,0 +1,28 @@
+#!/bin/bash
+# installed-by: jitter-hud-installer
+# Lists every USB device that is plugged in (hubs skipped), one per line:   id|LABEL
+#   id    = serial port (ttyUSB0 / ttyACM0) when the device has one, else its USB port (e.g. 1-1.2)
+#   LABEL = the device's own product name, or its VID:PID when it doesn't report one
+# Serial devices are listed first. Reads /sys directly (no lsusb needed).
+SYS="${JITTER_SYS:-/sys/bus/usb/devices}"
+shopt -s nullglob
+serial=(); other=()
+for d in "$SYS"/*; do
+    [ -r "$d/idVendor" ] || continue                    # skips interfaces like "1-1:1.0"
+    base="${d##*/}"
+    case "$base" in usb*) continue ;; esac              # root hubs
+    [ "$(cat "$d/bDeviceClass" 2>/dev/null)" = "09" ] && continue   # hubs
+    vid=$(cat "$d/idVendor" 2>/dev/null); pid=$(cat "$d/idProduct" 2>/dev/null)
+    prod=$(cat "$d/product" 2>/dev/null)
+    # shorten: drop filler words, keep the part that identifies the device
+    short=$(printf '%s' "$prod" | tr '_' ' ' | sed -E 's/\b(USB|UART|Bridge|Controller|Adapter|Device|to|Serial|Converter|Interface)\b//Ig; s/  +/ /g; s/^ +| +$//g')
+    short=$(printf '%s' "$short" | cut -c1-14)
+    if [ -n "$short" ]; then label="$short"
+    elif [ -n "$vid" ]; then label="${vid^^}:${pid^^}"
+    elif [ -n "$prod" ]; then label=$(printf '%s' "$prod" | cut -c1-14)
+    else label="UNKNOWN"; fi
+    tty=""
+    for t in $(find "$d" -maxdepth 4 \( -name 'ttyUSB*' -o -name 'ttyACM*' \) 2>/dev/null | sort); do tty="${t##*/}"; break; done
+    if [ -n "$tty" ]; then serial+=("$tty|$label"); else other+=("$base|$label"); fi
+done
+for l in "${serial[@]}" "${other[@]}"; do echo "$l"; done

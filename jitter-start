@@ -1,0 +1,57 @@
+#!/bin/bash
+# JITTER HUD supervisor: keeps conky alive and pinned to the built-in screen.
+CONFIG="$HOME/.config/conky/jitter.conf"
+LOG="$HOME/.cache/jitter-conky.log"
+INTERNAL="DPI-1-1"
+HUD_SIZE=684          # width/height of the HUD window in pixels
+LOCK="/tmp/jitter-start.$(id -u).lock"
+LAST_STATE=""
+
+export DISPLAY="${DISPLAY:-:0}"
+mkdir -p "$(dirname "$LOG")"
+
+# only one supervisor at a time
+exec 9>"$LOCK"
+flock -n 9 || exit 0
+
+while true; do
+    # wait until the built-in screen exists
+    if ! xrandr --query 2>/dev/null | grep -q "^${INTERNAL} connected"; then
+        sleep 3 9>&-
+        continue
+    fi
+
+    # external display (if any) becomes primary so windows/panel go there
+    EXTERNAL=$(xrandr --query | awk -v i="$INTERNAL" '$2 == "connected" && $1 != i {print $1; exit}')
+    PRIMARY="${EXTERNAL:-$INTERNAL}"
+    CURRENT_PRIMARY=$(xrandr --listmonitors | awk '/\+/ {print $NF; exit}')
+    if [ "$CURRENT_PRIMARY" != "$PRIMARY" ]; then
+        xrandr --output "$PRIMARY" --primary
+        sleep 1 9>&-
+    fi
+
+    # which monitor index / geometry is the built-in screen right now?
+    read -r HEAD GEOM < <(xrandr --listmonitors | awk -v n="$INTERNAL" '$NF == n {i=$1; sub(":","",i); print i, $3}')
+
+    if [ -n "$HEAD" ]; then
+        STATE="${PRIMARY}:${HEAD}:${GEOM}"
+        if [ "$STATE" != "$LAST_STATE" ] || ! pgrep -f "conky -c $CONFIG" >/dev/null; then
+            # centre the HUD on the built-in screen, whatever its size
+            GX=0; GY=0
+            if [[ "$GEOM" =~ ^([0-9]+)(/[0-9]+)?x([0-9]+) ]]; then
+                GX=$(( (BASH_REMATCH[1] - HUD_SIZE) / 2 ))
+                GY=$(( (BASH_REMATCH[3] - HUD_SIZE) / 2 ))
+                [ "$GX" -ge 0 ] || GX=0
+                [ "$GY" -ge 0 ] || GY=0
+            fi
+            sed -i "s/xinerama_head = [0-9]*,/xinerama_head = $HEAD,/; s/gap_x = [0-9-]*,/gap_x = $GX,/; s/gap_y = [0-9-]*,/gap_y = $GY,/" "$CONFIG"
+            pkill -f "conky -c $CONFIG" 2>/dev/null
+            sleep 1 9>&-
+            # setsid = fully detached; 9>&- = don't let conky hold the lock
+            setsid -f /usr/bin/conky -c "$CONFIG" >>"$LOG" 2>&1 9>&-
+            LAST_STATE="$STATE"
+        fi
+    fi
+
+    sleep 3 9>&-
+done

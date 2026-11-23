@@ -1,0 +1,5 @@
+#!/bin/sh
+i=$(iw dev 2>/dev/null | awk '/Interface/ {print $2; exit}')
+[ -n "$i" ] || { echo "OFFLINE"; exit; }
+iw dev "$i" link 2>/dev/null |
+awk '/signal:/ {print $2 " dBm"; found=1} END {if (!found) print "DISCONNECTED"}'

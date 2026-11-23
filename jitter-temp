@@ -1,0 +1,8 @@
+#!/bin/sh
+for f in /sys/class/thermal/thermal_zone*/temp; do
+    if [ -r "$f" ]; then
+        awk '{printf "%.1f C\n", $1/1000; exit}' "$f"
+        exit
+    fi
+done
+echo "N/A"
