@@ -11,27 +11,34 @@ A custom Conky + Lua telemetry HUD and hardware helper suite engineered to pair 
 * **Hardware & Radio Helpers (`HUD scripts and helpers/`):** Modular shell utilities for USB enumeration (`jitter-usb`), serial-port detection (`jitter-ports`), hardware thermals (`jitter-temp`), Wi-Fi signal reporting (`jitter-wifi`), and environment diagnostics (`jitter-doctor`).
 * **Optional Integrations:** Supports external battery telemetry (`~/.local/bin/jitter-batt`), custom user overrides (`~/.config/conky/jitter-hud.settings`), and Polychromatic red keyboard lighting (`jitter-keyboard-red.sh`).
 
-### ⚙️ Installation
-1. Install core dependencies (`conky-all`, `iproute2`, `iw`, `lm-sensors`, `usbutils`, `x11-xserver-utils`, `curl`, `fonts-firacode`), then copy the HUD files and helpers into place:
+## ⚙️ Installation
+
+1. **Install required system packages** (Debian/Ubuntu-based syntax shown):
+   ```bash
+   sudo apt update && sudo apt install -y conky-all iproute2 iw lm-sensors usbutils x11-xserver-utils curl fonts-firacode
+   ```
+
+2. **Create your local configuration and binary directories:**
    ```bash
    mkdir -p ~/.config/conky ~/.local/bin
-   cp "MAIN HUD CONF/jitter.conf" "MAIN HUD CONF/jitter-hud.lua" "MAIN HUD CONF/jitter-bg.png" ~/.config/conky/
-   cp "HUD scripts and helpers/jitter-"* ~/.local/bin/
+   ```
+
+3. **Copy the HUD configuration and artwork into `~/.config/conky/`:**
+   ```bash
+   cp jitter.conf jitter-hud.lua jitter-bg.png ~/.config/conky/
+   ```
+   > **Note:** If you cloned or downloaded the repository with subfolders intact, run `cp "MAIN HUD CONF/"* ~/.config/conky/` instead.
+
+4. **Install the helper scripts and make them executable:**
+   ```bash
+   cp jitter-* ~/.local/bin/
    chmod +x ~/.local/bin/jitter-*
+   ```
+   > **Note:** If copying from the repository subfolder, run `cp "HUD scripts and helpers/jitter-"* ~/.local/bin/` before running `chmod`.
 
-Place HUD configs & artwork in ~/.config/conky/:
-mkdir -p ~/.config/conky ~/.local/bin
-cp "MAIN HUD CONF/jitter.conf" "MAIN HUD CONF/jitter-hud.lua" "MAIN HUD CONF/jitter-bg.png" ~/.config/conky/
-
-Install & mark helper scripts executable in ~/.local/bin/:
-cp "HUD scripts and helpers/jitter-start" \
-   "HUD scripts and helpers/jitter-doctor" \
-   "HUD scripts and helpers/jitter-usb" \
-   "HUD scripts and helpers/jitter-ports" \
-   "HUD scripts and helpers/jitter-temp" \
-   "HUD scripts and helpers/jitter-wifi" \
-   "HUD scripts and helpers/jitter-keyboard-red.sh" \
-   ~/.local/bin/
-chmod +x ~/.local/bin/jitter-*
-
-Path Note: Some configs and scripts currently reference /home/jitter—update paths to match your user ($HOME) if deploying under a different username.
+5. **Verify your environment and launch the HUD:**
+   ```bash
+   ~/.local/bin/jitter-doctor
+   ~/.local/bin/jitter-start
+   ```
+   > **Note:** Ensure `~/.local/bin` is included in your shell `$PATH` so you can run `jitter-*` commands from anywhere.
